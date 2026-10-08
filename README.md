@@ -7,6 +7,9 @@
 ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black)
 ![Tesseract.js](https://img.shields.io/badge/OCR-Tesseract.js-blueviolet?style=flat-square)
 
+## 🌐 웹에서 바로 써보기 (Live Demo)
+👉 **[손글씨 연구소 접속하기 (GitHub Pages)](https://jabezpark-kor.github.io/vibeCoding_08_myMNIST/)**
+
 ---
 
 ## 🌸 주요 기능
