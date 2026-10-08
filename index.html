@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>몽실이의 몽글몽글 손글씨 연구소 🐾</title>
+  <meta name="description" content="손으로 쓴 한글과 숫자를 귀여운 마스코트 몽실이가 찰떡같이 맞춰주는 귀여운 손글씨 인식 웹 앱입니다.">
+
+  <!-- 웹 폰트: 귀여운 'Dongle'과 'Gaegu', 본문용 'Pretendard' -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Nanum+Pen+Script&family=Pretendard:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <!-- 스타일시트 -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Tesseract.js (클라이언트 측 한글/숫자 OCR 엔진) -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <!-- Canvas Confetti (축하 효과) -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+  <!-- 배경 장식 별똥별 및 방울들 -->
+  <div class="bg-decorations" aria-hidden="true">
+    <span class="bubble b1">✨</span>
+    <span class="bubble b2">🌸</span>
+    <span class="bubble b3">⭐</span>
+    <span class="bubble b4">☁️</span>
+    <span class="bubble b5">💛</span>
+  </div>
+
+  <div class="app-container">
+    <!-- 헤더 영역 -->
+    <header class="app-header">
+      <div class="logo-badge">
+        <span class="badge-icon">🐾</span>
+        <span>AI 손글씨 놀이터</span>
+      </div>
+      <h1 class="main-title">몽실이의 손글씨 연구소</h1>
+      <p class="subtitle">도화지에 숫자나 한글을 예쁘게 써보세요! 몽실이가 맞춰볼게요 🐱🔍</p>
+    </header>
+
+    <!-- 모드 선택 탭 -->
+    <nav class="mode-selector" aria-label="인식 모드 선택">
+      <button class="mode-btn active" id="modeNumberBtn" data-mode="number">
+        <span class="mode-emoji">🔢</span>
+        <span class="mode-name">숫자 전용 모드</span>
+        <span class="mode-tag">초고속!</span>
+      </button>
+      <button class="mode-btn" id="modeHangulBtn" data-mode="hangul">
+        <span class="mode-emoji">🇰🇷</span>
+        <span class="mode-name">한글 & 복합 모드</span>
+        <span class="mode-tag">단어도 OK</span>
+      </button>
+      <button class="mode-btn" id="modeQuizBtn" data-mode="quiz">
+        <span class="mode-emoji">🎮</span>
+        <span class="mode-name">따라쓰기 퀴즈</span>
+        <span class="mode-tag">재미 쏙쏙!</span>
+      </button>
+    </nav>
+
+    <!-- 퀴즈 제시어 배너 (퀴즈 모드일 때만 활성화) -->
+    <div class="quiz-banner hidden" id="quizBanner">
+      <div class="quiz-badge">🎯 미션!</div>
+      <div class="quiz-question">다음을 정성껏 써보세요: <strong id="targetQuizWord">7</strong></div>
+      <button class="quiz-refresh-btn" id="quizRefreshBtn" title="다른 문제 뽑기">🎲 새 문제</button>
+    </div>
+
+    <!-- 메인 워크스페이스 (캔버스 & 마스코트) -->
+    <main class="workspace">
+      <!-- 왼쪽/상단: 캔버스 카드 -->
+      <section class="canvas-card">
+        <div class="card-header">
+          <div class="pen-settings">
+            <span class="setting-label">✏️ 굵기:</span>
+            <div class="stroke-sizes" id="strokeSizes">
+              <button class="size-chip" data-size="8" title="얇게">얇게</button>
+              <button class="size-chip active" data-size="16" title="보통">보통</button>
+              <button class="size-chip" data-size="26" title="두껍게">두껍게</button>
+            </div>
+          </div>
+          <div class="pen-colors" id="colorPalette">
+            <span class="color-dot active" data-color="#2D3142" style="background-color: #2D3142;" title="먹색 잉크"></span>
+            <span class="color-dot" data-color="#4F7CAC" style="background-color: #4F7CAC;" title="파스텔 블루"></span>
+            <span class="color-dot" data-color="#E07A5F" style="background-color: #E07A5F;" title="코랄 핑크"></span>
+            <span class="color-dot" data-color="#81B29A" style="background-color: #81B29A;" title="민트 초록"></span>
+          </div>
+        </div>
+
+        <!-- 그리기 캔버스 영역 -->
+        <div class="canvas-wrapper">
+          <canvas id="paintCanvas" width="480" height="480"></canvas>
+          <div class="canvas-guidelines">
+            <div class="grid-line horizontal"></div>
+            <div class="grid-line vertical"></div>
+          </div>
+          <div class="canvas-placeholder" id="canvasPlaceholder">
+            <span>여기에 손글씨를 써보세요! ✍️</span>
+          </div>
+        </div>
+
+        <!-- 캔버스 조작 도구 모음 -->
+        <div class="canvas-toolbar">
+          <button class="tool-btn secondary" id="undoBtn" title="방금 그린 획 되돌리기">
+            <span>↩️</span> 되돌리기
+          </button>
+          <button class="tool-btn secondary" id="clearBtn" title="모두 깨끗이 지우기">
+            <span>🧹</span> 지우기
+          </button>
+          <button class="tool-btn primary" id="predictBtn" title="인공지능에게 맞혀달라고 하기">
+            <span class="btn-sparkle">✨</span>
+            <span class="btn-text">몽실아, 맞춰봐!</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- 오른쪽/하단: 몽실이 반응 & 판독 결과 카드 -->
+      <section class="result-card">
+        <!-- 귀여운 몽실이 마스코트 상태 -->
+        <div class="mascot-box">
+          <div class="mascot-avatar" id="mascotAvatar">
+            <div class="mascot-face" id="mascotFace">🐱</div>
+          </div>
+          <div class="speech-bubble" id="speechBubble">
+            "안녕! 도화지에 글씨를 쓰면 제가 뿅! 하고 알아맞혀 볼게요!"
+          </div>
+        </div>
+
+        <!-- 로딩 스피너 및 진행 바 -->
+        <div class="analysis-status hidden" id="analysisStatus">
+          <div class="progress-container">
+            <div class="progress-bar" id="progressBar"></div>
+          </div>
+          <p class="status-msg" id="statusMsg">글씨 획을 꼼꼼하게 들여다보는 중... 🔎</p>
+        </div>
+
+        <!-- 인식 결과 내용 -->
+        <div class="result-details" id="resultDetails">
+          <div class="empty-state" id="emptyState">
+            <p>글씨를 쓴 뒤 <strong>[몽실아, 맞춰봐!]</strong>를 눌러주세요 🐾</p>
+          </div>
+
+          <div class="prediction-view hidden" id="predictionView">
+            <div class="recognized-badge">인식된 글자</div>
+            <div class="big-result-wrap">
+              <span class="big-result-char" id="primaryResultChar">?</span>
+              <button class="speak-btn" id="speakBtn" title="발음 들어보기">
+                🔊
+              </button>
+            </div>
+
+            <div class="confidence-wrap">
+              <div class="conf-label">
+                <span>몽실이의 확신도</span>
+                <strong id="confidenceScore">0%</strong>
+              </div>
+              <div class="conf-bar-bg">
+                <div class="conf-bar-fill" id="confBarFill"></div>
+              </div>
+            </div>
+
+            <!-- 숫자 모드일 때 보여줄 확률 TOP 순위 -->
+            <div class="candidate-box hidden" id="candidateBox">
+              <div class="candidate-title">🧐 다른 후보 글자들은?</div>
+              <div class="candidate-list" id="candidateList">
+                <!-- JS에서 동적 생성 -->
+              </div>
+            </div>
+
+            <!-- 유용한 부가 기능 버튼 -->
+            <div class="action-buttons">
+              <button class="copy-btn" id="copyResultBtn">
+                📋 결과 복사
+              </button>
+              <button class="save-img-btn" id="saveCanvasBtn">
+                🖼️ 그림 저장
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- 푸터 -->
+    <footer class="app-footer">
+      <p>🌿 귀여운 인공지능 실험실 • 브라우저 안에서 안전하게 바로 분석됩니다.</p>
+    </footer>
+  </div>
+
+  <!-- 스크립트 연결 -->
+  <script src="script.js"></script>
+</body>
+</html>
